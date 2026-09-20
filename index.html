@@ -1404,18 +1404,86 @@
             reader.readAsText(file);
         }
 
+        // COMPRESSION & SYNC UTILITIES
+        function minifyDataPayload(inv, ords) {
+            // Strips heavy Base64 image data strings and preserves HTTP/HTTPS URLs
+            const minInventory = inv.map(i => ({
+                id: i.id,
+                n: i.name,
+                img: (i.image && i.image.startsWith('http')) ? i.image : '',
+                s: i.stock
+            }));
+
+            // Compress key names
+            const minOrders = ords.map(o => ({
+                id: o.id,
+                d: o.date,
+                c: o.customer,
+                did: o.designId,
+                dn: o.designName,
+                sz: o.sizes,
+                u: o.totalUnits || getOrderTotalUnits(o),
+                uc: o.unitCost,
+                up: o.unitPrice,
+                tc: o.totalCost,
+                tr: o.totalRevenue,
+                p: o.profit,
+                st: o.status
+            }));
+
+            return { i: minInventory, o: minOrders, t: lastExported };
+        }
+
+        function deminifyDataPayload(data) {
+            // Restores standard object structure from compressed keys
+            const restoredInventory = (data.i || []).map(i => ({
+                id: i.id,
+                name: i.n,
+                image: i.img || '',
+                stock: i.s || { S: 0, M: 0, L: 0, XL: 0, '2XL': 0, '3XL': 0 }
+            }));
+
+            const restoredOrders = (data.o || []).map(o => ({
+                id: o.id,
+                date: o.d,
+                customer: o.c,
+                designId: o.did,
+                designName: o.dn,
+                sizes: o.sz,
+                totalUnits: o.u,
+                unitCost: o.uc,
+                unitPrice: o.up,
+                totalCost: o.tc,
+                totalRevenue: o.tr,
+                profit: o.p,
+                status: o.st
+            }));
+
+            return { inventory: restoredInventory, orders: restoredOrders };
+        }
+
         function copySyncCode() {
             markExportOccurred();
-            const payload = { inventory, orders, exportedAt: lastExported };
+            
+            const payload = minifyDataPayload(inventory, orders);
             const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
             
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(encoded).then(() => {
+                    alert('Sync code copied to clipboard!');
+                }).catch(() => fallbackCopy(encoded));
+            } else {
+                fallbackCopy(encoded);
+            }
+        }
+
+        function fallbackCopy(text) {
             const dummy = document.createElement('textarea');
             document.body.appendChild(dummy);
-            dummy.value = encoded;
+            dummy.value = text;
             dummy.select();
             document.execCommand('copy');
             document.body.removeChild(dummy);
-
             alert('Sync code copied to clipboard!');
         }
 
@@ -1424,18 +1492,25 @@
             if (!code) return;
 
             try {
-                const decoded = JSON.parse(decodeURIComponent(atob(code.trim())));
-                if (decoded.inventory && decoded.orders) {
-                    inventory = decoded.inventory;
-                    orders = decoded.orders;
-                    saveToStorage();
-                    renderAll();
-                    alert('Data restored from Sync Code!');
+                const parsed = JSON.parse(decodeURIComponent(atob(code.trim())));
+                let restored;
+
+                // Handles both compressed keys and legacy format
+                if (parsed.i && parsed.o) {
+                    restored = deminifyDataPayload(parsed);
+                } else if (parsed.inventory && parsed.orders) {
+                    restored = parsed;
                 } else {
-                    alert('Invalid sync code format.');
+                    throw new Error("Invalid structure");
                 }
+
+                inventory = restored.inventory;
+                orders = restored.orders;
+                saveToStorage();
+                renderAll();
+                alert('Data restored from Sync Code!');
             } catch (err) {
-                alert('Failed to parse sync code.');
+                alert('Failed to parse sync code. Code may be corrupted or invalid.');
             }
         }
 
