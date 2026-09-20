@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feint Lab Collective - Apparel & Reseller Business Manager</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            950: '#0c4a6e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .no-select { user-select: none; -webkit-user-select: none; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="h-full text-slate-100 bg-slate-950 no-select overflow-x-hidden">
+
+    <!-- LOCK SCREEN OVERLAY -->
+    <div id="lockScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-md transition-opacity duration-300">
+        <div class="w-full max-w-md p-8 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl text-center relative overflow-hidden mx-4">
+            <div class="absolute -top-24 -left-24 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-sky-600/20 text-sky-400 mb-6 border border-sky-500/30">
+                <i class="fa-solid fa-lock text-2xl"></i>
+            </div>
+            
+            <h1 class="text-2xl font-bold text-white mb-1 tracking-tight">Feint Lab Collective</h1>
+            <p class="text-xs text-slate-400 mb-6">Enter PIN passcode to access business console</p>
+            
+            <form id="lockForm" onsubmit="unlockApp(event)" class="space-y-4">
+                <div>
+                    <input type="password" id="passcodeInput" maxlength="20" placeholder="••••••••" required 
+                           class="w-full text-center tracking-widest text-xl px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all">
+                </div>
+                <button type="submit" id="unlockBtn" class="w-full py-3.5 px-4 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-xl shadow-lg shadow-sky-600/20 hover:shadow-sky-500/30 transition-all flex items-center justify-center gap-2">
+                    <span>Unlock Workspace</span>
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+            </form>
+            <p id="lockError" class="mt-4 text-xs font-medium text-rose-400 hidden animate-bounce">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> Incorrect PIN passcode.
+            </p>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="appContainer" class="min-h-full flex flex-col hidden">
+        <header class="bg-[#0c4a6e] border-b border-sky-800 sticky top-0 z-30 shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2.5 bg-sky-500 rounded-xl text-white shadow-md shadow-sky-900/40">
+                            <i class="fa-solid fa-layer-group text-lg"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-lg text-white tracking-wide">Feint Lab Collective</span>
+                                <span class="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded bg-sky-400/20 text-sky-200 border border-sky-300/30">v3.1 Pro</span>
+                            </div>
+                            <p class="text-xs text-sky-200/80 hidden sm:block">Apparel & Reseller Management</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-3 text-xs">
+                        <div class="hidden md:flex items-center space-x-2 bg-sky-950/60 px-3 py-1.5 rounded-lg border border-sky-700/50 text-sky-200">
+                            <i class="fa-regular fa-clock text-sky-400"></i>
+                            <span>Last Export: <strong id="headerLastSync" class="text-white">Never</strong></span>
+                        </div>
+                        <button onclick="lockApp()" class="flex items-center space-x-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 px-3 py-1.5 rounded-lg transition-all" title="Lock Workspace">
+                            <i class="fa-solid fa-lock"></i>
+                            <span class="hidden sm:inline font-medium">Lock Workspace</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mobile Navigation -->
+            <div class="flex border-t border-sky-800/80 md:hidden overflow-x-auto bg-[#075985]">
+                <button onclick="switchTab('dashboard')" class="nav-tab-mobile flex-1 py-3 text-center text-xs font-medium text-sky-100/70 border-b-2 border-transparent active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-pie block text-base mb-1"></i> Dashboard
+                </button>
+                <button onclick="switchTab('inventory')" class="nav-tab-mobile flex-1 py-3 text-center text-xs font-medium text-sky-100/70 border-b-2 border-transparent" data-tab="inventory">
+                    <i class="fa-solid fa-boxes-stacked block text-base mb-1"></i> Size Matrix
+                </button>
+                <button onclick="switchTab('orders')" class="nav-tab-mobile flex-1 py-3 text-center text-xs font-medium text-sky-100/70 border-b-2 border-transparent" data-tab="orders">
+                    <i class="fa-solid fa-cart-shopping block text-base mb-1"></i> Orders
+                </button>
+                <button onclick="switchTab('resellers')" class="nav-tab-mobile flex-1 py-3 text-center text-xs font-medium text-sky-100/70 border-b-2 border-transparent" data-tab="resellers">
+                    <i class="fa-solid fa-users block text-base mb-1"></i> Resellers
+                </button>
+                <button onclick="switchTab('backup')" class="nav-tab-mobile flex-1 py-3 text-center text-xs font-medium text-sky-100/70 border-b-2 border-transparent" data-tab="backup">
+                    <i class="fa-solid fa-database block text-base mb-1"></i> Sync & Backup
+                </button>
+            </div>
+        </header>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full flex flex-col md:flex-row gap-6">
+            <!-- Sidebar Desktop Navigation -->
+            <aside class="w-64 flex-shrink-0 hidden md:block">
+                <nav class="space-y-1 sticky top-24">
+                    <button onclick="switchTab('dashboard')" class="nav-tab-desktop w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-all active" data-tab="dashboard">
+                        <i class="fa-solid fa-chart-pie w-5 text-center text-lg"></i>
+                        <span>Dashboard Analytics</span>
+                    </button>
+                    <button onclick="switchTab('inventory')" class="nav-tab-desktop w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-all" data-tab="inventory">
+                        <i class="fa-solid fa-boxes-stacked w-5 text-center text-lg"></i>
+                        <span>Stock Size Matrix</span>
+                    </button>
+                    <button onclick="switchTab('orders')" class="nav-tab-desktop w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-all" data-tab="orders">
+                        <i class="fa-solid fa-cart-shopping w-5 text-center text-lg"></i>
+                        <span>Orders & Payments</span>
+                    </button>
+                    <button onclick="switchTab('resellers')" class="nav-tab-desktop w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-all" data-tab="resellers">
+                        <i class="fa-solid fa-users w-5 text-center text-lg"></i>
+                        <span>Reseller Directory</span>
+                    </button>
+                    <button onclick="switchTab('backup')" class="nav-tab-desktop w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-all" data-tab="backup">
+                        <i class="fa-solid fa-database w-5 text-center text-lg"></i>
+                        <span>Backup & Sync Hub</span>
+                    </button>
+                </nav>
+            </aside>
+
+            <!-- Main Workspace -->
+            <main class="flex-1 min-w-0">
+                <!-- TAB 1: DASHBOARD -->
+                <section id="tab-dashboard" class="tab-content space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Revenue</span>
+                                <span class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs"><i class="fa-solid fa-dollar-sign"></i></span>
+                            </div>
+                            <h3 id="dashRevenue" class="text-2xl font-bold text-white mt-2">$0.00</h3>
+                            <p class="text-[10px] text-slate-500 mt-1">Recorded gross revenue</p>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Collected Net Profit</span>
+                                <span class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg text-xs"><i class="fa-solid fa-chart-line"></i></span>
+                            </div>
+                            <h3 id="dashProfit" class="text-2xl font-bold text-white mt-2">$0.00</h3>
+                            <p id="dashMargin" class="text-[10px] text-indigo-400 mt-1">Paid margin: 0%</p>
+                        </div>
+                        <div class="bg-slate-900 border border-amber-500/30 bg-amber-500/5 rounded-2xl p-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Pending Payments</span>
+                                <span class="p-2 bg-amber-500/20 text-amber-400 rounded-lg text-xs"><i class="fa-solid fa-hourglass-half"></i></span>
+                            </div>
+                            <h3 id="dashPendingPayments" class="text-2xl font-bold text-amber-400 mt-2">$0.00</h3>
+                            <p id="dashPendingOrdersCount" class="text-[10px] text-amber-300/70 mt-1">0 pending order(s)</p>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Shirts Sold</span>
+                                <span class="p-2 bg-purple-500/10 text-purple-400 rounded-lg text-xs"><i class="fa-solid fa-shirt"></i></span>
+                            </div>
+                            <h3 id="dashUnitsSold" class="text-2xl font-bold text-white mt-2">0</h3>
+                            <p class="text-[10px] text-slate-500 mt-1">Units across all orders</p>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Stock Remaining</span>
+                                <span class="p-2 bg-teal-500/10 text-teal-400 rounded-lg text-xs"><i class="fa-solid fa-boxes-stacked"></i></span>
+                            </div>
+                            <h3 id="dashInStock" class="text-2xl font-bold text-white mt-2">0</h3>
+                            <p class="text-[10px] text-slate-500 mt-1">Across all sizes</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col">
+                            <h4 class="text-sm font-semibold text-slate-200 mb-4">Stock vs. Sales Volume</h4>
+                            <div class="relative flex-1 min-h-[260px] w-full">
+                                <canvas id="chartStockVsSold"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col">
+                            <h4 class="text-sm font-semibold text-slate-200 mb-4">Top Performing Designs</h4>
+                            <div id="topDesignsList" class="space-y-3 flex-1 overflow-y-auto">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: INVENTORY / SIZE MATRIX -->
+                <section id="tab-inventory" class="tab-content hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Apparel Stock Size Matrix</h2>
+                            <p class="text-xs text-slate-400">Real-time inventory levels across sizes (S through 3XL) with design artwork preview</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="exportStockCSV()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl border border-slate-700 transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-csv"></i> Export Matrix CSV
+                            </button>
+                            <button onclick="openDesignModal()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-sky-600/20 transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus"></i> Add Design
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-950/60 border-b border-slate-800 text-[11px] uppercase font-semibold text-slate-400 tracking-wider">
+                                        <th class="py-3.5 px-4">Design Artwork & Name</th>
+                                        <th class="py-3.5 px-2 text-center w-20">S</th>
+                                        <th class="py-3.5 px-2 text-center w-20">M</th>
+                                        <th class="py-3.5 px-2 text-center w-20">L</th>
+                                        <th class="py-3.5 px-2 text-center w-20">XL</th>
+                                        <th class="py-3.5 px-2 text-center w-20">2XL</th>
+                                        <th class="py-3.5 px-2 text-center w-20">3XL</th>
+                                        <th class="py-3.5 px-4 text-center">Total Stock</th>
+                                        <th class="py-3.5 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stockMatrixBody" class="divide-y divide-slate-800 text-sm">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 3: ORDERS -->
+                <section id="tab-orders" class="tab-content hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Orders & Payment Tracking</h2>
+                            <p class="text-xs text-slate-400">Track reseller sales, pending balances, and size distributions</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="exportOrdersCSV()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl border border-slate-700 transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-csv"></i> Export CSV
+                            </button>
+                            <button onclick="openOrderModal()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-sky-600/20 transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-cart-plus"></i> New Order
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Payment Status Filter Bar -->
+                    <div class="flex items-center justify-between bg-slate-900 p-2.5 rounded-2xl border border-slate-800 flex-wrap gap-2">
+                        <div class="flex items-center space-x-1.5 text-xs">
+                            <button onclick="setOrderFilter('all')" id="filterBtnAll" class="px-3 py-1.5 rounded-xl font-semibold bg-sky-600 text-white transition-all">
+                                All Orders
+                            </button>
+                            <button onclick="setOrderFilter('Pending')" id="filterBtnPending" class="px-3 py-1.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-all">
+                                <i class="fa-solid fa-hourglass-half text-amber-400 mr-1"></i> Pending Payment
+                            </button>
+                            <button onclick="setOrderFilter('Partial')" id="filterBtnPartial" class="px-3 py-1.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-all">
+                                <i class="fa-solid fa-chart-pie text-indigo-400 mr-1"></i> Partially Paid
+                            </button>
+                            <button onclick="setOrderFilter('Paid')" id="filterBtnPaid" class="px-3 py-1.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-all">
+                                <i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Fully Paid
+                            </button>
+                        </div>
+                        <div class="text-xs text-slate-400 px-2 font-medium" id="orderFilterCount">
+                            Showing all orders
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-950/60 border-b border-slate-800 text-[11px] uppercase font-semibold text-slate-400 tracking-wider">
+                                        <th class="py-3.5 px-4">Date</th>
+                                        <th class="py-3.5 px-4">Reseller / Customer</th>
+                                        <th class="py-3.5 px-4">Design</th>
+                                        <th class="py-3.5 px-4">Sizes & Qty</th>
+                                        <th class="py-3.5 px-4 text-right">Revenue</th>
+                                        <th class="py-3.5 px-4 text-right">Profit</th>
+                                        <th class="py-3.5 px-4 text-center">Status</th>
+                                        <th class="py-3.5 px-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTableBody" class="divide-y divide-slate-800 text-sm">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 4: RESELLERS -->
+                <section id="tab-resellers" class="tab-content hidden space-y-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Reseller Directory</h2>
+                            <p class="text-xs text-slate-400">Detailed overview of partner volume, sales, and outstanding pending balances</p>
+                        </div>
+                    </div>
+
+                    <div id="resellerGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Populated dynamically -->
+                    </div>
+                </section>
+
+                <!-- TAB 5: BACKUP & SYNC -->
+                <section id="tab-backup" class="tab-content hidden space-y-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Data Backup & Sync Hub</h2>
+                        <p class="text-xs text-slate-400">Keep Feint Lab Collective synchronized across devices with backups and clipboard sync</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 1-Click Sync Code Card -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center space-x-3 mb-4">
+                                    <div class="p-2.5 bg-sky-500/10 text-sky-400 rounded-xl">
+                                        <i class="fa-solid fa-copy text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-slate-200">Clipboard Sync Code</h3>
+                                        <p class="text-xs text-slate-400">Copy encoded state to transfer workspace instantly</p>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                                    Generates an encoded portable payload. Click "Copy Sync Code" and paste it into Feint Lab on another mobile device or PC.
+                                </p>
+                            </div>
+                            <div class="space-y-3 pt-4 border-t border-slate-800">
+                                <button onclick="copySyncCode()" class="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-sky-600/20 transition-all flex items-center justify-center gap-2">
+                                    <i class="fa-regular fa-clone"></i> Copy Sync Code to Clipboard
+                                </button>
+                                <button onclick="pasteSyncCode()" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-file-import"></i> Restore Data from Sync Code
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- JSON File Backup & Import Card -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center space-x-3 mb-4">
+                                    <div class="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl">
+                                        <i class="fa-solid fa-file-export text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-slate-200">JSON File Backup</h3>
+                                        <p class="text-xs text-slate-400">Download complete structured database backups with design images</p>
+                                    </div>
+                                </div>
+                                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1 mb-4">
+                                    <div class="flex justify-between">
+                                        <span>Last Exported:</span>
+                                        <strong id="backupLastExport" class="text-slate-200">Never</strong>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Database Records:</span>
+                                        <strong id="backupItemCount" class="text-slate-200">0 Designs / 0 Orders</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-3 pt-4 border-t border-slate-800">
+                                <button onclick="exportJSONBackup()" class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-download"></i> Download JSON Backup File
+                                </button>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="py-2.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center">
+                                        <i class="fa-solid fa-rotate text-emerald-400"></i> Overwrite
+                                        <input type="file" id="jsonFileInputOverwrite" accept=".json" class="hidden" onchange="importJSONBackup(event, 'overwrite')">
+                                    </label>
+                                    <label class="py-2.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center">
+                                        <i class="fa-solid fa-code-merge text-indigo-400"></i> Merge
+                                        <input type="file" id="jsonFileInputMerge" accept=".json" class="hidden" onchange="importJSONBackup(event, 'merge')">
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reset Options -->
+                    <div class="bg-rose-950/20 border border-rose-900/30 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div>
+                            <h4 class="font-bold text-rose-300 text-sm">Factory Reset Database</h4>
+                            <p class="text-xs text-rose-400/80 mt-1">Permanently remove all inventory, shirt design artwork, pending orders, and reseller directory records.</p>
+                        </div>
+                        <button onclick="confirmClearAllData()" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-rose-600/20 transition-all whitespace-nowrap">
+                            <i class="fa-solid fa-trash-can mr-1.5"></i> Clear All Data
+                        </button>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD/EDIT DESIGN WITH IMAGE UPLOAD -->
+    <div id="designModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl relative mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-5">
+                <h3 id="designModalTitle" class="text-lg font-bold text-white">Add New Shirt Design</h3>
+                <button onclick="closeDesignModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveDesign(event)" class="space-y-4">
+                <input type="hidden" id="designEditId">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Design / Graphic Name</label>
+                    <input type="text" id="designName" required placeholder="e.g. Feint Acid Cyber Tee" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+
+                <!-- Shirt Image Upload & Preview Block -->
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <label class="block text-xs font-medium text-slate-300">Design Artwork / Image Preview</label>
+                    <div class="flex items-center gap-4">
+                        <div id="imagePreviewContainer" class="w-20 h-20 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0 relative group">
+                            <img id="designImagePreview" src="" class="w-full h-full object-cover hidden">
+                            <div id="designImagePlaceholder" class="text-center text-slate-600 p-2">
+                                <i class="fa-solid fa-shirt text-2xl"></i>
+                                <span class="block text-[9px] mt-1">No Image</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 space-y-2">
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Upload File (Max 2MB)</label>
+                                <input type="file" id="designImageFile" accept="image/*" onchange="handleImageFileUpload(event)" class="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                            </div>
+                            <div class="relative">
+                                <span class="text-[10px] text-slate-500 block mb-1">OR Image URL</span>
+                                <input type="text" id="designImageUrl" placeholder="https://..." oninput="handleImageUrlInput(event)" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-2">Initial Stock Allocation by Size</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1">S</span>
+                            <input type="number" min="0" id="sizeS" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-center text-sm text-white">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1">M</span>
+                            <input type="number" min="0" id="sizeM" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-center text-sm text-white">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1">L</span>
+                            <input type="number" min="0" id="sizeL" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-center text-sm text-white">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1">XL</span>
+                            <input type="number" min="0" id="sizeXL" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-center text-sm text-white">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1">2XL</span>
+                            <input type="number" min="0" id="size2XL" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-center text-sm text-white">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1">3XL</span>
+                            <input type="number" min="0" id="size3XL" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-center text-sm text-white">
+                        </div>
+                    </div>
+                </div>
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeDesignModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-sky-600/20">Save Design</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: RECORD ORDER WITH PENDING PAYMENT OPTIONS -->
+    <div id="orderModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-xl rounded-2xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto mx-4">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-lg font-bold text-white">Record Order & Sales</h3>
+                <button onclick="closeOrderModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveOrder(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Reseller / Customer Name</label>
+                        <input type="text" id="orderCustomer" required placeholder="e.g. Jordan Vance" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Select Shirt Design</label>
+                        <select id="orderDesignSelect" required onchange="updateOrderDesignPreview()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Selected Design Preview Badge -->
+                <div id="orderDesignPreviewBadge" class="hidden flex items-center gap-3 p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                    <img id="orderDesignPreviewThumb" src="" class="w-10 h-10 object-cover rounded-lg bg-slate-900 border border-slate-800">
+                    <div>
+                        <span id="orderDesignPreviewName" class="text-xs font-semibold text-slate-200 block"></span>
+                        <span id="orderDesignPreviewStock" class="text-[10px] text-emerald-400 block"></span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-2">Quantities per Size</label>
+                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1 text-center">S</span>
+                            <input type="number" min="0" id="ordS" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-center text-sm text-white">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1 text-center">M</span>
+                            <input type="number" min="0" id="ordM" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-center text-sm text-white">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1 text-center">L</span>
+                            <input type="number" min="0" id="ordL" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-center text-sm text-white">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1 text-center">XL</span>
+                            <input type="number" min="0" id="ordXL" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-center text-sm text-white">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1 text-center">2XL</span>
+                            <input type="number" min="0" id="ord2XL" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-center text-sm text-white">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 block mb-1 text-center">3XL</span>
+                            <input type="number" min="0" id="ord3XL" value="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-center text-sm text-white">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Unit Cost ($)</label>
+                        <input type="number" step="0.01" min="0" id="orderUnitCost" required placeholder="8.50" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Selling Price ($)</label>
+                        <input type="number" step="0.01" min="0" id="orderUnitPrice" required placeholder="20.00" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Payment Status</label>
+                        <select id="orderStatus" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <option value="Paid">Paid in Full</option>
+                            <option value="Partial">Partially Paid</option>
+                            <option value="Pending">Pending Payment</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeOrderModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-sky-600/20">Save Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- APPLICATION LOGIC -->
+    <script>
+        // MASTER SHA-256 HASH FOR '2120709'
+        const MASTER_PIN = "2120709";
+        const MASTER_PIN_HASH = "d309bebe8efed2beccaa1d9c240bb456ee8ed28eb41e6a100650d03bf18c2196";
+
+        // APP STATE
+        let inventory = [];
+        let orders = [];
+        let lastExported = localStorage.getItem('feint_lab_last_exported') || null;
+        let chartInstance = null;
+        let currentOrderFilter = 'all';
+        let currentEditingImageData = null;
+
+        // INITIALIZATION
+        window.addEventListener('DOMContentLoaded', () => {
+            initSecurityInhibitors();
+            checkLockStatus();
+            loadLocalStorageData();
+            updateLastExportDisplay();
+        });
+
+        // DISABLE RIGHT CLICK / DEVTOOLS HOTKEYS
+        function initSecurityInhibitors() {
+            document.addEventListener('contextmenu', e => e.preventDefault());
+            document.addEventListener('keydown', e => {
+                if (e.keyCode === 123) { e.preventDefault(); return false; }
+                if (e.ctrlKey && (e.shiftKey && (e.keyCode === 73 || e.keyCode === 74) || e.keyCode === 85)) {
+                    e.preventDefault(); return false;
+                }
+                if (e.metaKey && e.altKey && (e.keyCode === 73 || e.keyCode === 85)) {
+                    e.preventDefault(); return false;
+                }
+            });
+        }
+
+        // SHA-256 UTILITY
+        async function sha256(str) {
+            const buffer = new TextEncoder().encode(str);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // HELPER TO PARSE SIZES SAFELY
+        function parseOrderSizes(sizesRaw) {
+            if (!sizesRaw) return { S: 0, M: 0, L: 0, XL: 0, '2XL': 0, '3XL': 0 };
+            if (typeof sizesRaw === 'object' && sizesRaw !== null) {
+                return sizesRaw;
+            }
+            if (typeof sizesRaw === 'string') {
+                try {
+                    return JSON.parse(sizesRaw);
+                } catch (e) {
+                    console.error("Error parsing order sizes string:", e);
+                }
+            }
+            return { S: 0, M: 0, L: 0, XL: 0, '2XL': 0, '3XL': 0 };
+        }
+
+        // HELPER TO GET TOTAL UNITS FOR AN ORDER
+        function getOrderTotalUnits(order) {
+            if (order.totalPcs !== undefined && !isNaN(Number(order.totalPcs))) {
+                return Number(order.totalPcs);
+            }
+            if (order.totalUnits !== undefined && !isNaN(Number(order.totalUnits))) {
+                return Number(order.totalUnits);
+            }
+            const sizesObj = parseOrderSizes(order.sizes);
+            return Object.values(sizesObj).reduce((sum, qty) => sum + (Number(qty) || 0), 0);
+        }
+
+        // UNLOCK APPLICATION
+        async function unlockApp(e) {
+            e.preventDefault();
+            const input = document.getElementById('passcodeInput').value.trim();
+            const inputHash = await sha256(input);
+            
+            if (input === MASTER_PIN || inputHash === MASTER_PIN_HASH) {
+                sessionStorage.setItem('feint_lab_unlocked', 'true');
+                document.getElementById('lockScreen').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+                document.getElementById('lockError').classList.add('hidden');
+                document.getElementById('passcodeInput').value = '';
+                renderAll();
+            } else {
+                document.getElementById('lockError').classList.remove('hidden');
+            }
+        }
+
+        function checkLockStatus() {
+            if (sessionStorage.getItem('feint_lab_unlocked') === 'true') {
+                document.getElementById('lockScreen').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+                renderAll();
+            } else {
+                document.getElementById('lockScreen').classList.remove('hidden');
+                document.getElementById('appContainer').classList.add('hidden');
+            }
+        }
+
+        function lockApp() {
+            sessionStorage.removeItem('feint_lab_unlocked');
+            checkLockStatus();
+        }
+
+        function loadLocalStorageData() {
+            const savedData = localStorage.getItem('feint_lab_db');
+
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    inventory = parsed.inventory || [];
+                    orders = parsed.orders || [];
+                } catch (e) {
+                    console.error("Failed to parse storage", e);
+                }
+            } else {
+                // Initialize default sample data for Feint Lab Collective
+                inventory = [
+                    { id: '1', name: 'Feint Lab Core Oversized Tee', image: '', stock: { S: 12, M: 20, L: 25, XL: 15, '2XL': 8, '3XL': 3 } },
+                    { id: '2', name: 'Acid Cyber Skeleton Hoodie', image: '', stock: { S: 5, M: 14, L: 18, XL: 10, '2XL': 5, '3XL': 0 } },
+                    { id: '3', name: 'Minimalist Tokyo Drift Tee', image: '', stock: { S: 8, M: 10, L: 12, XL: 6, '2XL': 2, '3XL': 1 } }
+                ];
+                orders = [
+                    {
+                        id: 'ord_101',
+                        date: new Date(Date.now() - 86400000 * 3).toISOString(),
+                        customer: 'Devon Miles',
+                        designId: '1',
+                        designName: 'Feint Lab Core Oversized Tee',
+                        sizes: { S: 2, M: 5, L: 5, XL: 0, '2XL': 0, '3XL': 0 },
+                        totalUnits: 12,
+                        unitCost: 8.50,
+                        unitPrice: 22.00,
+                        totalCost: 102.00,
+                        totalRevenue: 264.00,
+                        profit: 162.00,
+                        status: 'Paid'
+                    },
+                    {
+                        id: 'ord_102',
+                        date: new Date(Date.now() - 86400000 * 1).toISOString(),
+                        customer: 'Alex Rivera (Reseller)',
+                        designId: '2',
+                        designName: 'Acid Cyber Skeleton Hoodie',
+                        sizes: { S: 0, M: 4, L: 6, XL: 2, '2XL': 0, '3XL': 0 },
+                        totalUnits: 12,
+                        unitCost: 14.00,
+                        unitPrice: 30.00,
+                        totalCost: 168.00,
+                        totalRevenue: 360.00,
+                        profit: 192.00,
+                        status: 'Pending'
+                    }
+                ];
+                saveToStorage();
+            }
+        }
+
+        function saveToStorage() {
+            const payload = { inventory, orders };
+            localStorage.setItem('feint_lab_db', JSON.stringify(payload));
+        }
+
+        function updateLastExportDisplay() {
+            const formatted = lastExported ? new Date(lastExported).toLocaleString() : 'Never';
+            document.getElementById('headerLastSync').innerText = formatted;
+            document.getElementById('backupLastExport').innerText = formatted;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-tab-desktop').forEach(btn => {
+                const isActive = btn.dataset.tab === tabId;
+                btn.classList.toggle('bg-slate-900', isActive);
+                btn.classList.toggle('text-sky-400', isActive);
+                btn.classList.toggle('text-slate-400', !isActive);
+            });
+
+            document.querySelectorAll('.nav-tab-mobile').forEach(btn => {
+                const isActive = btn.dataset.tab === tabId;
+                btn.classList.toggle('text-sky-400', isActive);
+                btn.classList.toggle('border-sky-500', isActive);
+            });
+
+            if (tabId === 'dashboard') renderDashboard();
+            if (tabId === 'inventory') renderStockMatrix();
+            if (tabId === 'orders') renderOrdersTable();
+            if (tabId === 'resellers') renderResellers();
+            if (tabId === 'backup') updateBackupStats();
+        }
+
+        function renderAll() {
+            renderDashboard();
+            renderStockMatrix();
+            renderOrdersTable();
+            renderResellers();
+            updateBackupStats();
+        }
+
+        function renderDashboard() {
+            const totalRev = orders.reduce((sum, o) => sum + (Number(o.totalRevenue) || 0), 0);
+            
+            const paidOrders = orders.filter(o => o.status === 'Paid');
+            const pendingOrders = orders.filter(o => o.status === 'Pending');
+            const partialOrders = orders.filter(o => o.status === 'Partial');
+
+            const collectedProfit = paidOrders.reduce((sum, o) => sum + (Number(o.profit) || 0), 0);
+            const pendingPaymentsAmount = pendingOrders.reduce((sum, o) => sum + (Number(o.totalRevenue) || 0), 0) + 
+                                          partialOrders.reduce((sum, o) => sum + ((Number(o.totalRevenue) || 0) * 0.5), 0);
+            
+            const unitsSold = orders.reduce((sum, o) => sum + getOrderTotalUnits(o), 0);
+            
+            let totalStock = 0;
+            inventory.forEach(item => {
+                Object.values(item.stock).forEach(qty => totalStock += (Number(qty) || 0));
+            });
+
+            const paidRevenue = paidOrders.reduce((sum, o) => sum + (Number(o.totalRevenue) || 0), 0);
+            const margin = paidRevenue > 0 ? ((collectedProfit / paidRevenue) * 100).toFixed(1) : '0';
+
+            document.getElementById('dashRevenue').innerText = `$${totalRev.toFixed(2)}`;
+            document.getElementById('dashProfit').innerText = `$${collectedProfit.toFixed(2)}`;
+            document.getElementById('dashMargin').innerText = `Paid margin: ${margin}%`;
+            document.getElementById('dashPendingPayments').innerText = `$${pendingPaymentsAmount.toFixed(2)}`;
+            document.getElementById('dashPendingOrdersCount').innerText = `${pendingOrders.length + partialOrders.length} pending/partial order(s)`;
+            document.getElementById('dashUnitsSold').innerText = unitsSold;
+            document.getElementById('dashInStock').innerText = totalStock;
+
+            // Render Top Designs with thumbnails
+            const designMap = {};
+            orders.forEach(o => {
+                const units = getOrderTotalUnits(o);
+                designMap[o.designName] = (designMap[o.designName] || 0) + units;
+            });
+            const sortedDesigns = Object.entries(designMap).sort((a, b) => b[1] - a[1]);
+
+            const topContainer = document.getElementById('topDesignsList');
+            if (sortedDesigns.length === 0) {
+                topContainer.innerHTML = `<p class="text-xs text-slate-500 py-4 text-center">No orders recorded yet</p>`;
+            } else {
+                topContainer.innerHTML = sortedDesigns.map(([name, qty]) => {
+                    const matchedInv = inventory.find(i => i.name === name);
+                    const thumb = matchedInv && matchedInv.image ? 
+                        `<img src="${matchedInv.image}" class="w-7 h-7 rounded object-cover border border-slate-800">` : 
+                        `<div class="w-7 h-7 rounded bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-500 text-[10px]"><i class="fa-solid fa-shirt"></i></div>`;
+
+                    return `
+                        <div class="flex items-center justify-between p-2.5 bg-slate-950/60 rounded-xl border border-slate-800">
+                            <div class="flex items-center space-x-2 truncate pr-2">
+                                ${thumb}
+                                <span class="text-xs font-medium text-slate-300 truncate max-w-[130px]">${name}</span>
+                            </div>
+                            <span class="text-xs font-bold text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg">${qty} Sold</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('chartStockVsSold').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            const labels = inventory.map(i => i.name);
+            const stockData = inventory.map(i => Object.values(i.stock).reduce((a, b) => Number(a) + Number(b), 0));
+            const soldData = inventory.map(i => {
+                return orders.filter(o => o.designId === i.id).reduce((sum, o) => sum + getOrderTotalUnits(o), 0);
+            });
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Current Stock', data: stockData, backgroundColor: '#0284c7', borderRadius: 6 },
+                        { label: 'Units Sold', data: soldData, backgroundColor: '#6366f1', borderRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+        }
+
+        function handleImageFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+                alert("File size exceeds 2MB limit. Please upload a smaller image.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentEditingImageData = e.target.result;
+                updateImageModalPreview(currentEditingImageData);
+                document.getElementById('designImageUrl').value = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleImageUrlInput(event) {
+            const url = event.target.value.trim();
+            if (url) {
+                currentEditingImageData = url;
+                updateImageModalPreview(url);
+            } else {
+                currentEditingImageData = null;
+                updateImageModalPreview(null);
+            }
+        }
+
+        function updateImageModalPreview(src) {
+            const previewImg = document.getElementById('designImagePreview');
+            const placeholder = document.getElementById('designImagePlaceholder');
+            if (src) {
+                previewImg.src = src;
+                previewImg.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                previewImg.src = '';
+                previewImg.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+        }
+
+        // STOCK SIZE MATRIX MANAGEMENT
+        function renderStockMatrix() {
+            const tbody = document.getElementById('stockMatrixBody');
+            if (inventory.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-slate-500 text-xs">No designs found. Click "Add Design" to begin.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = inventory.map(item => {
+                const sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL'];
+                let total = 0;
+                const sizeCols = sizes.map(sz => {
+                    const count = item.stock[sz] || 0;
+                    total += Number(count);
+                    return `
+                        <td class="py-3 px-2 text-center">
+                            <div class="inline-flex items-center bg-slate-950 border border-slate-800 rounded-lg overflow-hidden">
+                                <button onclick="adjustStock('${item.id}', '${sz}', -1)" class="px-1.5 py-1 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-minus text-[10px]"></i></button>
+                                <span class="px-1.5 font-mono text-xs font-semibold ${count === 0 ? 'text-rose-400' : 'text-slate-200'}">${count}</span>
+                                <button onclick="adjustStock('${item.id}', '${sz}', 1)" class="px-1.5 py-1 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-plus text-[10px]"></i></button>
+                            </div>
+                        </td>
+                    `;
+                }).join('');
+
+                const imageThumb = item.image ? 
+                    `<img src="${item.image}" class="w-10 h-10 rounded-lg object-cover bg-slate-950 border border-slate-800 flex-shrink-0">` : 
+                    `<div class="w-10 h-10 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-600 text-sm flex-shrink-0"><i class="fa-solid fa-shirt"></i></div>`;
+
+                return `
+                    <tr class="hover:bg-slate-900/50 transition-colors">
+                        <td class="py-3.5 px-4 font-semibold text-slate-200">
+                            <div class="flex items-center space-x-3">
+                                ${imageThumb}
+                                <span>${item.name}</span>
+                            </div>
+                        </td>
+                        ${sizeCols}
+                        <td class="py-3.5 px-4 text-center font-bold text-sky-400 font-mono">${total}</td>
+                        <td class="py-3.5 px-4 text-right space-x-1">
+                            <button onclick="editDesign('${item.id}')" class="p-1.5 text-slate-400 hover:text-sky-400 rounded-lg hover:bg-slate-800"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteDesign('${item.id}')" class="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function adjustStock(designId, size, delta) {
+            const design = inventory.find(i => i.id === designId);
+            if (!design) return;
+            const current = design.stock[size] || 0;
+            design.stock[size] = Math.max(0, current + delta);
+            saveToStorage();
+            renderStockMatrix();
+            renderDashboard();
+        }
+
+        function openDesignModal(id = null) {
+            document.getElementById('designEditId').value = id || '';
+            document.getElementById('designModalTitle').innerText = id ? 'Edit Apparel Design' : 'Add New Shirt Design';
+            document.getElementById('designImageFile').value = '';
+            document.getElementById('designImageUrl').value = '';
+
+            if (id) {
+                const item = inventory.find(i => i.id === id);
+                document.getElementById('designName').value = item.name;
+                document.getElementById('sizeS').value = item.stock.S || 0;
+                document.getElementById('sizeM').value = item.stock.M || 0;
+                document.getElementById('sizeL').value = item.stock.L || 0;
+                document.getElementById('sizeXL').value = item.stock.XL || 0;
+                document.getElementById('size2XL').value = item.stock['2XL'] || 0;
+                document.getElementById('size3XL').value = item.stock['3XL'] || 0;
+                currentEditingImageData = item.image || null;
+                if (item.image && item.image.startsWith('http')) {
+                    document.getElementById('designImageUrl').value = item.image;
+                }
+            } else {
+                document.getElementById('designName').value = '';
+                document.getElementById('sizeS').value = 0;
+                document.getElementById('sizeM').value = 0;
+                document.getElementById('sizeL').value = 0;
+                document.getElementById('sizeXL').value = 0;
+                document.getElementById('size2XL').value = 0;
+                document.getElementById('size3XL').value = 0;
+                currentEditingImageData = null;
+            }
+            updateImageModalPreview(currentEditingImageData);
+            document.getElementById('designModal').classList.remove('hidden');
+        }
+
+        function closeDesignModal() {
+            document.getElementById('designModal').classList.add('hidden');
+        }
+
+        function saveDesign(e) {
+            e.preventDefault();
+            const id = document.getElementById('designEditId').value;
+            const name = document.getElementById('designName').value.trim();
+            const stock = {
+                S: parseInt(document.getElementById('sizeS').value) || 0,
+                M: parseInt(document.getElementById('sizeM').value) || 0,
+                L: parseInt(document.getElementById('sizeL').value) || 0,
+                XL: parseInt(document.getElementById('sizeXL').value) || 0,
+                '2XL': parseInt(document.getElementById('size2XL').value) || 0,
+                '3XL': parseInt(document.getElementById('size3XL').value) || 0
+            };
+
+            if (id) {
+                const item = inventory.find(i => i.id === id);
+                if (item) { 
+                    item.name = name; 
+                    item.stock = stock; 
+                    item.image = currentEditingImageData || item.image || '';
+                }
+            } else {
+                inventory.push({ 
+                    id: Date.now().toString(), 
+                    name, 
+                    stock,
+                    image: currentEditingImageData || ''
+                });
+            }
+
+            saveToStorage();
+            closeDesignModal();
+            renderAll();
+        }
+
+        function editDesign(id) { openDesignModal(id); }
+
+        function deleteDesign(id) {
+            if (confirm("Are you sure you want to remove this shirt design?")) {
+                inventory = inventory.filter(i => i.id !== id);
+                saveToStorage();
+                renderAll();
+            }
+        }
+
+        // ORDERS MANAGEMENT & FILTERING
+        function setOrderFilter(filter) {
+            currentOrderFilter = filter;
+            document.getElementById('filterBtnAll').className = filter === 'all' ? 'px-3 py-1.5 rounded-xl font-semibold bg-sky-600 text-white transition-all' : 'px-3 py-1.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-all';
+            document.getElementById('filterBtnPending').className = filter === 'Pending' ? 'px-3 py-1.5 rounded-xl font-semibold bg-amber-600 text-white transition-all' : 'px-3 py-1.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-all';
+            document.getElementById('filterBtnPartial').className = filter === 'Partial' ? 'px-3 py-1.5 rounded-xl font-semibold bg-indigo-600 text-white transition-all' : 'px-3 py-1.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-all';
+            document.getElementById('filterBtnPaid').className = filter === 'Paid' ? 'px-3 py-1.5 rounded-xl font-semibold bg-emerald-600 text-white transition-all' : 'px-3 py-1.5 rounded-xl font-medium text-slate-400 hover:bg-slate-800 transition-all';
+            renderOrdersTable();
+        }
+
+        function renderOrdersTable() {
+            const tbody = document.getElementById('ordersTableBody');
+            let filtered = orders;
+
+            if (currentOrderFilter !== 'all') {
+                filtered = orders.filter(o => o.status === currentOrderFilter);
+            }
+
+            document.getElementById('orderFilterCount').innerText = `Showing ${filtered.length} of ${orders.length} order(s)`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-500 text-xs">No ${currentOrderFilter !== 'all' ? currentOrderFilter.toLowerCase() : ''} orders found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(ord => {
+                const parsedSizes = parseOrderSizes(ord.sizes);
+                const sizeBadges = Object.entries(parsedSizes)
+                    .filter(([_, qty]) => Number(qty) > 0)
+                    .map(([sz, qty]) => `<span class="px-1.5 py-0.5 bg-slate-800 text-[10px] font-mono text-slate-300 rounded border border-slate-700">${sz}:${qty}</span>`)
+                    .join(' ');
+
+                let statusBadge = '';
+                if (ord.status === 'Pending') {
+                    statusBadge = `<span class="px-2.5 py-1 text-[10px] font-semibold rounded-full border bg-amber-500/10 text-amber-400 border-amber-500/30 flex items-center justify-center gap-1"><i class="fa-solid fa-clock text-[9px]"></i> Pending</span>`;
+                } else if (ord.status === 'Partial') {
+                    statusBadge = `<span class="px-2.5 py-1 text-[10px] font-semibold rounded-full border bg-indigo-500/10 text-indigo-400 border-indigo-500/30 flex items-center justify-center gap-1"><i class="fa-solid fa-pie-chart text-[9px]"></i> Partial</span>`;
+                } else {
+                    statusBadge = `<span class="px-2.5 py-1 text-[10px] font-semibold rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/30 flex items-center justify-center gap-1"><i class="fa-solid fa-check text-[9px]"></i> Paid</span>`;
+                }
+
+                const matchedInv = inventory.find(i => i.id === ord.designId || i.name === ord.designName);
+                const orderDesignThumb = matchedInv && matchedInv.image ? 
+                    `<img src="${matchedInv.image}" class="w-8 h-8 rounded object-cover bg-slate-950 border border-slate-800 flex-shrink-0">` : 
+                    `<div class="w-8 h-8 rounded bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-600 text-xs flex-shrink-0"><i class="fa-solid fa-shirt"></i></div>`;
+
+                const revenue = Number(ord.totalRevenue) || 0;
+                const profit = Number(ord.profit) || 0;
+
+                return `
+                    <tr class="hover:bg-slate-900/50 transition-colors">
+                        <td class="py-3.5 px-4 text-xs text-slate-400">${new Date(ord.date).toLocaleDateString()}</td>
+                        <td class="py-3.5 px-4 font-semibold text-slate-200">${ord.customer}</td>
+                        <td class="py-3.5 px-4 text-slate-300">
+                            <div class="flex items-center space-x-2">
+                                ${orderDesignThumb}
+                                <span>${ord.designName}</span>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4">${sizeBadges || '<span class="text-xs text-slate-500">None</span>'}</td>
+                        <td class="py-3.5 px-4 text-right font-mono font-semibold ${ord.status !== 'Paid' ? 'text-amber-400' : 'text-slate-200'}">$${revenue.toFixed(2)}</td>
+                        <td class="py-3.5 px-4 text-right font-mono font-bold text-emerald-400">+$${profit.toFixed(2)}</td>
+                        <td class="py-3.5 px-4 text-center">
+                            ${statusBadge}
+                        </td>
+                        <td class="py-3.5 px-4 text-right space-x-1">
+                            ${ord.status !== 'Paid' ? 
+                                `<button onclick="togglePaymentStatus('${ord.id}')" class="px-2 py-1 text-[11px] bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-medium shadow transition-all" title="Mark as Paid"><i class="fa-solid fa-check mr-1"></i>Mark Paid</button>` : 
+                                `<button onclick="togglePaymentStatus('${ord.id}')" class="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-all" title="Revert to Pending">Revert</button>`
+                            }
+                            <button onclick="deleteOrder('${ord.id}')" class="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800" title="Delete Order (Restores Stock)"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function togglePaymentStatus(orderId) {
+            const ord = orders.find(o => o.id === orderId);
+            if (!ord) return;
+            ord.status = ord.status === 'Paid' ? 'Pending' : 'Paid';
+            saveToStorage();
+            renderAll();
+        }
+
+        function openOrderModal() {
+            const select = document.getElementById('orderDesignSelect');
+            if (inventory.length === 0) {
+                alert('Please add at least one shirt design before placing an order.');
+                return;
+            }
+            select.innerHTML = inventory.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            
+            document.getElementById('orderCustomer').value = '';
+            document.getElementById('ordS').value = 0;
+            document.getElementById('ordM').value = 0;
+            document.getElementById('ordL').value = 0;
+            document.getElementById('ordXL').value = 0;
+            document.getElementById('ord2XL').value = 0;
+            document.getElementById('ord3XL').value = 0;
+            document.getElementById('orderUnitCost').value = '';
+            document.getElementById('orderUnitPrice').value = '';
+            document.getElementById('orderStatus').value = 'Paid';
+
+            updateOrderDesignPreview();
+            document.getElementById('orderModal').classList.remove('hidden');
+        }
+
+        function updateOrderDesignPreview() {
+            const select = document.getElementById('orderDesignSelect');
+            const selectedId = select.value;
+            const design = inventory.find(i => i.id === selectedId);
+            const badge = document.getElementById('orderDesignPreviewBadge');
+            
+            if (design) {
+                badge.classList.remove('hidden');
+                document.getElementById('orderDesignPreviewName').innerText = design.name;
+                const totalStock = Object.values(design.stock).reduce((a, b) => Number(a) + Number(b), 0);
+                document.getElementById('orderDesignPreviewStock').innerText = `${totalStock} units available in stock`;
+                const thumb = document.getElementById('orderDesignPreviewThumb');
+                if (design.image) {
+                    thumb.src = design.image;
+                    thumb.classList.remove('hidden');
+                } else {
+                    thumb.classList.add('hidden');
+                }
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function closeOrderModal() {
+            document.getElementById('orderModal').classList.add('hidden');
+        }
+
+        function saveOrder(e) {
+            e.preventDefault();
+            const designId = document.getElementById('orderDesignSelect').value;
+            const design = inventory.find(i => i.id === designId);
+
+            if (!design) {
+                alert('Select a valid design');
+                return;
+            }
+
+            const sizes = {
+                S: parseInt(document.getElementById('ordS').value) || 0,
+                M: parseInt(document.getElementById('ordM').value) || 0,
+                L: parseInt(document.getElementById('ordL').value) || 0,
+                XL: parseInt(document.getElementById('ordXL').value) || 0,
+                '2XL': parseInt(document.getElementById('ord2XL').value) || 0,
+                '3XL': parseInt(document.getElementById('ord3XL').value) || 0
+            };
+
+            const totalUnits = Object.values(sizes).reduce((a, b) => a + b, 0);
+            if (totalUnits === 0) {
+                alert('Please select at least 1 t-shirt unit quantity.');
+                return;
+            }
+
+            for (const [sz, qty] of Object.entries(sizes)) {
+                if ((design.stock[sz] || 0) < qty) {
+                    alert(`Insufficient stock for size ${sz}! Available: ${design.stock[sz] || 0}`);
+                    return;
+                }
+            }
+
+            // Deduct stock levels
+            for (const [sz, qty] of Object.entries(sizes)) {
+                design.stock[sz] -= qty;
+            }
+
+            const unitCost = parseFloat(document.getElementById('orderUnitCost').value) || 0;
+            const unitPrice = parseFloat(document.getElementById('orderUnitPrice').value) || 0;
+            const totalCost = unitCost * totalUnits;
+            const totalRevenue = unitPrice * totalUnits;
+            const profit = totalRevenue - totalCost;
+
+            const order = {
+                id: 'ord_' + Date.now(),
+                date: new Date().toISOString(),
+                customer: document.getElementById('orderCustomer').value.trim(),
+                designId: design.id,
+                designName: design.name,
+                sizes,
+                totalUnits,
+                unitCost,
+                unitPrice,
+                totalCost,
+                totalRevenue,
+                profit,
+                status: document.getElementById('orderStatus').value
+            };
+
+            orders.unshift(order);
+            saveToStorage();
+            closeOrderModal();
+            renderAll();
+        }
+
+        function deleteOrder(orderId) {
+            if (confirm("Delete this order? Restores item quantities back to stock.")) {
+                const ord = orders.find(o => o.id === orderId);
+                if (ord) {
+                    const design = inventory.find(i => i.id === ord.designId || i.name === ord.designName);
+                    if (design) {
+                        const parsedSizes = parseOrderSizes(ord.sizes);
+                        for (const [sz, qty] of Object.entries(parsedSizes)) {
+                            design.stock[sz] = (design.stock[sz] || 0) + (Number(qty) || 0);
+                        }
+                    }
+                    orders = orders.filter(o => o.id !== orderId);
+                    saveToStorage();
+                    renderAll();
+                }
+            }
+        }
+
+        // RESELLER DIRECTORY & BACKUP FUNCTIONS
+        function renderResellers() {
+            const grid = document.getElementById('resellerGrid');
+            const resellerMap = {};
+
+            orders.forEach(o => {
+                const rev = Number(o.totalRevenue) || 0;
+                const prof = Number(o.profit) || 0;
+
+                if (!resellerMap[o.customer]) {
+                    resellerMap[o.customer] = { name: o.customer, count: 0, revenue: 0, profit: 0, pending: 0 };
+                }
+                resellerMap[o.customer].count += 1;
+                resellerMap[o.customer].revenue += rev;
+                resellerMap[o.customer].profit += prof;
+
+                if (o.status === 'Pending') {
+                    resellerMap[o.customer].pending += rev;
+                } else if (o.status === 'Partial') {
+                    resellerMap[o.customer].pending += (rev * 0.5);
+                }
+            });
+
+            const resellers = Object.values(resellerMap);
+
+            if (resellers.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-12 text-center text-slate-500 text-xs">No resellers or orders recorded.</div>`;
+                return;
+            }
+
+            grid.innerHTML = resellers.map(r => `
+                <div class="bg-slate-900 border ${r.pending > 0 ? 'border-amber-500/40 bg-amber-500/5' : 'border-slate-800'} rounded-2xl p-5 hover:border-slate-700 transition-all">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-sky-600/20 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-base">
+                            ${r.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white text-sm">${r.name}</h4>
+                            <p class="text-xs text-slate-400">${r.count} order(s) placed</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 pt-3 border-t border-slate-800/80 text-xs">
+                        <div>
+                            <span class="text-slate-500 block text-[10px]">Total Revenue</span>
+                            <span class="font-mono font-semibold text-slate-200">$${r.revenue.toFixed(2)}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block text-[10px]">Collected Profit</span>
+                            <span class="font-mono font-semibold text-emerald-400">$${r.profit.toFixed(2)}</span>
+                        </div>
+                        <div>
+                            <span class="text-amber-400 block text-[10px] font-semibold">Pending Balance</span>
+                            <span class="font-mono font-bold ${r.pending > 0 ? 'text-amber-400' : 'text-slate-500'}">$${r.pending.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateBackupStats() {
+            document.getElementById('backupItemCount').innerText = `${inventory.length} Designs / ${orders.length} Orders`;
+        }
+
+        function markExportOccurred() {
+            lastExported = new Date().toISOString();
+            localStorage.setItem('feint_lab_last_exported', lastExported);
+            updateLastExportDisplay();
+        }
+
+        function exportJSONBackup() {
+            markExportOccurred();
+            const data = {
+                app: 'Feint Lab Collective',
+                version: '3.1 Pro',
+                exportedAt: lastExported,
+                inventory,
+                orders
+            };
+            const jsonStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `FeintLab_v3_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importJSONBackup(e, mode = 'overwrite') {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if (data.inventory && data.orders) {
+                        if (mode === 'overwrite') {
+                            inventory = data.inventory;
+                            orders = data.orders;
+                        } else if (mode === 'merge') {
+                            // Merge Inventory by ID
+                            data.inventory.forEach(newInv => {
+                                const idx = inventory.findIndex(i => i.id === newInv.id);
+                                if (idx >= 0) inventory[idx] = newInv;
+                                else inventory.push(newInv);
+                            });
+                            // Merge Orders by ID
+                            data.orders.forEach(newOrd => {
+                                const idx = orders.findIndex(o => o.id === newOrd.id);
+                                if (idx >= 0) orders[idx] = newOrd;
+                                else orders.push(newOrd);
+                            });
+                        }
+                        saveToStorage();
+                        renderAll();
+                        alert(`Database successfully restored (${mode} mode)!`);
+                    } else {
+                        alert('Invalid backup structure.');
+                    }
+                } catch (err) {
+                    alert('Error parsing JSON backup file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function copySyncCode() {
+            markExportOccurred();
+            const payload = { inventory, orders, exportedAt: lastExported };
+            const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+            
+            const dummy = document.createElement('textarea');
+            document.body.appendChild(dummy);
+            dummy.value = encoded;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+
+            alert('Sync code copied to clipboard!');
+        }
+
+        function pasteSyncCode() {
+            const code = prompt("Paste your 1-Click Sync Code:");
+            if (!code) return;
+
+            try {
+                const decoded = JSON.parse(decodeURIComponent(atob(code.trim())));
+                if (decoded.inventory && decoded.orders) {
+                    inventory = decoded.inventory;
+                    orders = decoded.orders;
+                    saveToStorage();
+                    renderAll();
+                    alert('Data restored from Sync Code!');
+                } else {
+                    alert('Invalid sync code format.');
+                }
+            } catch (err) {
+                alert('Failed to parse sync code.');
+            }
+        }
+
+        function exportStockCSV() {
+            let csv = "Design Name,S,M,L,XL,2XL,3XL,Total Stock\n";
+            inventory.forEach(i => {
+                const s = i.stock;
+                const total = Object.values(s).reduce((a, b) => Number(a) + Number(b), 0);
+                csv += `"${i.name}",${s.S||0},${s.M||0},${s.L||0},${s.XL||0},${s['2XL']||0},${s['3XL']||0},${total}\n`;
+            });
+            downloadCSV(csv, 'FeintLab_Stock_Matrix.csv');
+        }
+
+        function exportOrdersCSV() {
+            let csv = "Date,Customer,Design,Total Units,Total Revenue,Total Cost,Profit,Payment Status\n";
+            orders.forEach(o => {
+                const units = getOrderTotalUnits(o);
+                const rev = Number(o.totalRevenue) || 0;
+                const cost = Number(o.totalCost) || 0;
+                const profit = Number(o.profit) || 0;
+                csv += `"${new Date(o.date).toLocaleDateString()}","${o.customer}","${o.designName}",${units},${rev},${cost},${profit},"${o.status}"\n`;
+            });
+            downloadCSV(csv, 'FeintLab_Orders_History.csv');
+        }
+
+        function downloadCSV(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function confirmClearAllData() {
+            const pin = prompt("Enter Master Security PIN to reset all database records:");
+            if (!pin) return;
+
+            const inputHash = await sha256(pin.trim());
+            if (pin.trim() === MASTER_PIN || inputHash === MASTER_PIN_HASH) {
+                inventory = [];
+                orders = [];
+                localStorage.removeItem('feint_lab_db');
+                renderAll();
+                alert('All application data cleared.');
+            } else {
+                alert('Incorrect PIN. Factory reset cancelled.');
+            }
+        }
+    </script>
+</body>
+</html>
